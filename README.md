@@ -87,7 +87,7 @@ JSON requests use `Content-Type: application/json`. After login, send `Authoriza
 - Checkout locks inventory rows and runs in one transaction. Stock is reduced atomically, and a failed checkout leaves the cart untouched.
 - A cancelled order restores stock once; a second cancellation, cancelling a shipped order, or confirming a COD payment on a cancelled order returns **409**.
 - Product deletion is a soft deactivation so historical orders stay readable.
-- Malformed bodies return **400**, unknown routes **404**, wrong methods **405**, and genuine server errors **500** (logged server-side without leaking internals).
+- Malformed bodies return **400**, unknown routes **404**, wrong methods **405**, unsupported content types **415**, and genuine server errors **500** (logged server-side without leaking internals).
 
 ### Delivery lifecycle
 
@@ -113,7 +113,7 @@ The production build is verified with `npm run build` and `npm run lint`.
 .\mvnw.cmd test
 ```
 
-Integration tests run against an isolated in-memory H2 database and do not need MySQL. They cover registration/login, logout invalidation, product authorization and search, cart quantity rules, checkout and stock checks, cancellation/restocking, order privacy, payment ownership, admin-only COD confirmation, delivery status updates and tracking, plus 400/404 error mapping. A Mockito unit test covers product filtering. Current suite: **13 tests passing**.
+Integration tests run against an isolated in-memory H2 database and do not need MySQL. They cover registration/login, logout invalidation, product authorization and search, cart quantity rules, checkout and stock checks, cancellation/restocking, order privacy, payment ownership, admin-only COD confirmation, delivery status updates and tracking, plus 400/404/415 error mapping. A Mockito unit test covers product filtering. Current suite: **14 tests passing**.
 
 ## Docker (optional)
 

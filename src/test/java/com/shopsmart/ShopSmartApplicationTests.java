@@ -265,6 +265,17 @@ class ShopSmartApplicationTests {
     }
 
     @Test
+    void nonJsonContentTypeIsRejectedWithUnsupportedMediaType() throws Exception {
+        String token = registerAndLogin("media-type");
+
+        mvc.perform(post("/api/orders")
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                        .content("paymentMethod=COD"))
+                .andExpect(status().isUnsupportedMediaType());
+    }
+
+    @Test
     void adminUpdatesDeliveryStatusAndOwnerCanTrackIt() throws Exception {
         String adminToken = login("admin@shopsmart.test", "TestAdmin#2026");
         String customerToken = registerAndLogin("delivery");

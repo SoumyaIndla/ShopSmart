@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -97,6 +98,13 @@ public class ApiExceptionHandler {
     public ApiDtos.ErrorResponse noResource(NoResourceFoundException e) {
         return error(404, "Not Found",
                 "The requested resource was not found");
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    @ResponseStatus(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+    public ApiDtos.ErrorResponse unsupportedMediaType(HttpMediaTypeNotSupportedException e) {
+        return error(415, "Unsupported Media Type",
+                "Content-Type must be application/json");
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
