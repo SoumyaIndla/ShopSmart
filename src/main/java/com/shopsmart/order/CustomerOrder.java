@@ -3,6 +3,7 @@ package com.shopsmart.order;
 
 import com.shopsmart.user.ShopUser;
 import com.shopsmart.payment.Payment;
+
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
@@ -18,7 +19,7 @@ public class CustomerOrder {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     private ShopUser user;
 
     @OneToOne(
@@ -46,7 +47,7 @@ public class CustomerOrder {
             mappedBy = "order",
             cascade = CascadeType.ALL,
             orphanRemoval = true,
-            fetch = FetchType.EAGER
+            fetch = FetchType.LAZY
     )
     private List<OrderLine> items = new ArrayList<>();
 
@@ -56,15 +57,19 @@ public class CustomerOrder {
     public CustomerOrder(ShopUser user) {
         this.user = user;
         this.total = BigDecimal.ZERO;
+        this.status = OrderStatus.PLACED;
         this.deliveryStatus = DeliveryStatus.PROCESSING;
     }
 
+    // Add order item
     public void add(OrderLine line) {
         items.add(line);
         line.setOrder(this);
+
         total = total.add(line.getLineTotal());
     }
 
+    // Cancel order
     public void cancel() {
         if (status != OrderStatus.PLACED) {
             throw new IllegalStateException(
@@ -75,12 +80,24 @@ public class CustomerOrder {
         status = OrderStatus.CANCELLED;
     }
 
+    // Update delivery status
     public void updateDeliveryStatus(DeliveryStatus newStatus) {
+        if (newStatus == null) {
+            throw new IllegalArgumentException(
+                    "Delivery status cannot be null"
+            );
+        }
+
         this.deliveryStatus = newStatus;
     }
 
+    // Getters
     public Long getId() {
         return id;
+    }
+
+    public ShopUser getUser() {
+        return user;
     }
 
     public BigDecimal getTotal() {
@@ -107,8 +124,12 @@ public class CustomerOrder {
         return payment;
     }
 
+    // Setters
     public void setPayment(Payment payment) {
         this.payment = payment;
-    }
 
+        if (payment != null) {
+            payment.setOrder(this);
+        }
+    }
 }

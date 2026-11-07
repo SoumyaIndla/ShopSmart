@@ -4,12 +4,16 @@ package com.shopsmart.admin;
 import com.shopsmart.order.OrderRepository;
 import com.shopsmart.api.ApiDtos.OrderResponse;
 import com.shopsmart.api.ApiDtos.AdminProductResponse;
+import com.shopsmart.api.ApiDtos.DeliveryStatusUpdateRequest;
 import com.shopsmart.api.ApiMapper;
 import com.shopsmart.product.ProductRepository;
 import com.shopsmart.user.UserRepository;
+import com.shopsmart.service.OrderService;
 import com.shopsmart.service.PaymentService;
 
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+
+import jakarta.validation.Valid;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -30,17 +34,20 @@ public class AdminController {
  private final UserRepository users;
  private final OrderRepository orders;
  private final ProductRepository products;
+ private final OrderService orderService;
  private final PaymentService paymentService;
 
  public AdminController(
          UserRepository u,
          OrderRepository o,
          ProductRepository p,
+         OrderService orderService,
          PaymentService paymentService) {
 
   users = u;
   orders = o;
   products = p;
+  this.orderService = orderService;
   this.paymentService = paymentService;
  }
 
@@ -129,6 +136,18 @@ public class AdminController {
           .stream()
           .map(ApiMapper::order)
           .toList();
+ }
+
+ // Move an order through the delivery lifecycle.
+ @PatchMapping("/orders/{orderId}/delivery-status")
+ public OrderResponse updateDeliveryStatus(
+         @PathVariable Long orderId,
+         @Valid @RequestBody DeliveryStatusUpdateRequest request) {
+
+  return orderService.updateDeliveryStatus(
+          orderId,
+          request.deliveryStatus()
+  );
  }
 
  // Confirm COD payment after collecting cash from the customer.

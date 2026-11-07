@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import api from "./services/api";
 import Auth from "./Auth";
+import Orders from "./Orders";
 import "./App.css";
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
 
     const [showAuth, setShowAuth] = useState(false);
     const [showCart, setShowCart] = useState(false);
+    const [showOrders, setShowOrders] = useState(false);
 
     const [user, setUser] = useState(() => {
         try {
@@ -117,6 +119,7 @@ function App() {
             setCart({ items: [], total: 0 });
             setOrder(null);
             setShowCart(false);
+            setShowOrders(false);
             setShowAuth(false);
             setCartMessage("");
         }
@@ -206,9 +209,24 @@ function App() {
         setOrder(null);
         setShowAuth(false);
         setShowCart(true);
+        setShowOrders(false);
         setCartMessage("");
 
         await loadCart();
+    }
+
+    // Open order history
+    async function handleOpenOrders() {
+        if (!user || !sessionStorage.getItem("shopsmart_token")) {
+            setShowAuth(true);
+            return;
+        }
+
+        setOrder(null);
+        setShowAuth(false);
+        setShowCart(false);
+        setCartMessage("");
+        setShowOrders(true);
     }
 
     // Checkout
@@ -253,6 +271,7 @@ function App() {
     function handleContinueShopping() {
         setOrder(null);
         setShowCart(false);
+        setShowOrders(false);
         setCartMessage("");
     }
 
@@ -318,6 +337,13 @@ function App() {
 
                             <button
                                 className="cart-button"
+                                onClick={handleOpenOrders}
+                            >
+                                📦 My Orders
+                            </button>
+
+                            <button
+                                className="cart-button"
                                 onClick={handleLogout}
                             >
                                 Logout
@@ -377,6 +403,14 @@ function App() {
                         Continue Shopping
                     </button>
                 </main>
+
+            ) : showOrders ? (
+                <Orders
+                    onBack={() => {
+                        setShowOrders(false);
+                        setCartMessage("");
+                    }}
+                />
 
             ) : showCart ? (
 

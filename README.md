@@ -1,82 +1,142 @@
-# ShopSmart — Secure E-Commerce REST API
+# ShopSmart — Secure E-Commerce Application
 
-ShopSmart is a Java 17 / Spring Boot backend for customer accounts, product search, shopping carts, checkout, inventory, and order management. It uses MySQL, Spring Data JPA, Spring Security, BCrypt, JWT, Maven, JUnit 5, Mockito, and OpenAPI/Swagger UI.
+ShopSmart is a full-stack e-commerce project: a Java 17 / Spring Boot REST API with a React (Vite) storefront. It covers customer accounts, product search, carts, checkout, inventory, COD payments, delivery tracking, and role-based administration.
 
-## Run locally in IntelliJ
+**Backend:** Java 17, Spring Boot, Spring Security, JWT, Spring Data JPA / Hibernate, Bean Validation, MySQL, Maven, JUnit 5, Mockito, OpenAPI / Swagger UI.
+**Frontend:** React 19, Vite, Axios, React Router, plain CSS.
 
-1. Open this Maven project and set **Project SDK** and **Maven Runner JRE** to JDK 17 (`C:\Users\<you>\.jdks\ms-17.0.21.0.2` is one common IntelliJ-managed location).
-2. Start MySQL 8 and create database `shopsmart_db`, or allow the configured local MySQL URL to create it.
-3. In `ShopSmartApplication` → **Edit Configurations** → **Environment variables**, add `DB_USERNAME` and `DB_PASSWORD` for MySQL. Add `ADMIN_EMAIL` and `ADMIN_PASSWORD` to seed the initial administrator on startup.
-4. Run `ShopSmartApplication`. The API is at `http://localhost:8080`.
-5. Open the storefront at `http://localhost:8080/` or interactive API docs at `http://localhost:8080/swagger-ui.html`.
+## Run locally
 
-On the first non-test startup, ShopSmart adds eight sample products if the catalog is empty. Set `shopsmart.demo-data.enabled=false` to disable this starter data.
+1. Install JDK 17 and MySQL 8, and make sure the MySQL service is running.
+2. Copy `.env.example` to `.env` in the project root and fill in:
+   - `DB_PASSWORD` — your local MySQL password
+   - `JWT_SECRET` — a long random string (32+ characters)
+   - `ADMIN_EMAIL` / `ADMIN_PASSWORD` — optional first administrator
+3. Start the backend from the project root:
 
-Keep credentials in your local environment or IntelliJ run configuration; do not commit them. The built-in JWT key and `ddl-auto=update` are for local learning only. Before deployment, set a strong random `JWT_SECRET`, use a dedicated database account and migration tool, and configure HTTPS and secrets management.
+   ```powershell
+   .\mvnw.cmd spring-boot:run
+   ```
+
+   Spring Boot imports `.env` automatically (`spring.config.import=optional:file:.env[.properties]`). Real environment variables take precedence, so the same build works in Docker and on Render.
+
+4. Open the API at `http://localhost:8080`, or Swagger UI at `http://localhost:8080/swagger-ui/index.html`.
+5. Start the frontend:
+
+   ```powershell
+   cd shopsmart-frontend
+   npm install
+   npm run dev
+   ```
+
+   The storefront runs at `http://localhost:5173`.
+
+On the first non-test startup ShopSmart inserts eight sample products if the catalog is empty. Set `shopsmart.demo-data.enabled=false` to disable this.
+
+### Configuration
+
+No credentials are committed. `application.properties` reads everything from the environment, and `.env` is git-ignored.
 
 | Environment variable | Default | Purpose |
 |---|---|---|
 | `DB_URL` | `jdbc:mysql://localhost:3306/shopsmart_db?...` | JDBC URL |
-| `DB_USERNAME` | `root` | Local MySQL user |
-| `DB_PASSWORD` | empty | Local MySQL password |
-| `JWT_SECRET` | development key | JWT signing key; replace outside local use |
-| `JWT_EXPIRATION_MS` | `86400000` | Token lifetime |
+| `DB_USERNAME` | `root` | Database user |
+| `DB_PASSWORD` | empty | Database password |
+| `JWT_SECRET` | none (required) | JWT signing key, 32+ characters |
+| `JWT_EXPIRATION_MS` | `86400000` | Token lifetime (24 h) |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | empty | Optional initial administrator |
+| `PORT` | `8080` | HTTP port |
+
+`ddl-auto=update` is convenient for local development. For a real deployment, use a dedicated database user and a migration tool such as Flyway.
 
 ## API overview
 
-JSON requests use `Content-Type: application/json`. After login, send `Authorization: Bearer <token>` for protected endpoints.
+JSON requests use `Content-Type: application/json`. After login, send `Authorization: Bearer <token>` on protected endpoints.
 
 | Method | Endpoint | Access | Purpose |
 |---|---|---|---|
 | POST | `/api/auth/register` | Public | Register a customer |
 | POST | `/api/auth/login` | Public | Sign in and receive a JWT |
 | POST | `/api/auth/logout` | Signed in | Invalidate all current JWTs for this account |
-| GET | `/api/products?search=mouse&category=Electronics&page=0&size=20&sortBy=name&direction=asc` | Public | Search, filter, page, and sort active products |
-| GET | `/api/products/categories` | Public | List available product categories |
-| GET | `/api/products/{id}` | Public | View product details |
-| POST, PUT, DELETE | `/api/products[/{id}]` | Admin | Create, update, or deactivate a product |
+| GET | `/api/products?search=mouse&category=Electronics&page=0&size=20&sortBy=name&direction=asc` | Public | Search, filter, page and sort active products |
+| GET | `/api/products/categories` | Public | List available categories |
+| GET | `/api/products/{id}` | Public | Product details |
+| POST, PUT, DELETE | `/api/products[/{id}]` | Admin | Create, update or deactivate a product |
 | GET | `/api/cart` | Customer | View own cart and total |
 | POST | `/api/cart/items` | Customer | Add `{ "productId": 1, "quantity": 2 }` |
-| PUT | `/api/cart/items/{productId}` | Customer | Set quantity using `{ "quantity": 3 }` |
+| PUT | `/api/cart/items/{productId}` | Customer | Set quantity with `{ "quantity": 3 }` |
 | DELETE | `/api/cart/items/{productId}` | Customer | Remove a product |
 | DELETE | `/api/cart` | Customer | Clear own cart |
-| POST | `/api/orders` | Customer | Place order from cart |
-| GET | `/api/orders` | Customer | View own order history |
-| GET | `/api/orders/{id}` | Owner | View own order |
-| POST | `/api/orders/{id}/cancel` | Owner | Cancel a placed order and restore stock |
-| GET | `/api/admin/users`, `/api/admin/orders` | Admin | View customer summaries and all orders |
-| GET | `/api/admin/products` | Admin | View all products, including deactivated items |
+| POST | `/api/orders` | Customer | Place an order from the cart (`{ "paymentMethod": "COD" }`) |
+| GET | `/api/orders` | Customer | Own order history |
+| GET | `/api/orders/{id}` | Owner | Own order details |
+| POST | `/api/orders/{id}/cancel` | Owner | Cancel a placed, not-yet-shipped order and restore stock |
+| GET | `/api/orders/{id}/tracking` | Owner | Delivery status and timeline |
+| GET | `/api/payments/order/{orderId}` | Owner | Payment for own order |
+| POST | `/api/payments/cod/{orderId}/confirm` | Admin | Mark a COD payment as collected |
+| GET | `/api/admin/users` | Admin | Registered customers and admins |
+| GET | `/api/admin/orders` | Admin | All orders |
+| GET | `/api/admin/products`, `/api/admin/products/{id}` | Admin | All products, including deactivated |
+| PATCH | `/api/admin/orders/{orderId}/delivery-status` | Admin | Set `{ "deliveryStatus": "SHIPPED" }` |
 
-Customer passwords are BCrypt-hashed. Customers can only access their own carts and orders. Checkout locks inventory rows and runs atomically. Cancelling a placed order restores stock once; a second cancellation returns HTTP 409. Product deletion is a soft deactivation so old orders remain readable. Invalid credentials return HTTP 401 and forbidden actions return HTTP 403.
+### Security behaviour
+
+- Passwords are BCrypt-hashed; JWTs are stateless and carry a token version. Logout increments the version, invalidating every previously issued token for that account.
+- Customers can only read their own cart, orders, payments and tracking. Someone else's resource returns **404**, so its existence is not leaked.
+- Admin-only actions return **403** for authenticated customers and **401** when no token is present.
+- Checkout locks inventory rows and runs in one transaction. Stock is reduced atomically, and a failed checkout leaves the cart untouched.
+- A cancelled order restores stock once; a second cancellation, cancelling a shipped order, or confirming a COD payment on a cancelled order returns **409**.
+- Product deletion is a soft deactivation so historical orders stay readable.
+- Malformed bodies return **400**, unknown routes **404**, wrong methods **405**, and genuine server errors **500** (logged server-side without leaking internals).
+
+### Delivery lifecycle
+
+`PROCESSING → CONFIRMED → PACKED → SHIPPED → OUT_FOR_DELIVERY → DELIVERED`
+
+`RETURNED` is available as an exceptional final state. The customer tracking endpoint returns the current status plus a completed/current flag for each step.
+
+## Frontend
+
+The React storefront (`shopsmart-frontend`) includes:
+
+- Customer registration and login with JWT stored in `sessionStorage`
+- Product catalogue with search-ready API integration
+- Cart with quantity updates and removal
+- COD checkout and an order confirmation screen
+- **My Orders** page with payment status, delivery status and a tracking timeline
+
+The production build is verified with `npm run build` and `npm run lint`.
 
 ## Tests
 
-Run in IntelliJ with the Maven `test` goal, or in a terminal configured for JDK 17:
-
 ```powershell
-$env:JAVA_HOME = "$env:USERPROFILE\.jdks\ms-17.0.21.0.2"
-$env:Path = "$env:JAVA_HOME\bin;$env:Path"
 .\mvnw.cmd test
 ```
 
-The integration tests use an isolated in-memory H2 database and do not require a running MySQL server. They cover registration, login, product authorization/search, cart quantity changes, checkout, stock checks, cancellation/restocking, logout, and access control. A Mockito unit test covers product filtering.
+Integration tests run against an isolated in-memory H2 database and do not need MySQL. They cover registration/login, logout invalidation, product authorization and search, cart quantity rules, checkout and stock checks, cancellation/restocking, order privacy, payment ownership, admin-only COD confirmation, delivery status updates and tracking, plus 400/404 error mapping. A Mockito unit test covers product filtering. Current suite: **13 tests passing**.
 
 ## Docker (optional)
 
-Copy `.env.example` to `.env`, replace each placeholder with local values, then run:
+Copy `.env.example` to `.env`, fill in the values, then:
 
 ```powershell
 docker compose up --build
 ```
 
-The API is available at `http://localhost:8080`; Swagger UI is at `/swagger-ui.html`. To stop the app while preserving the local database volume, run `docker compose down`.
+Docker Compose runs MySQL on host port `3307` and the API on `8080`. The app container receives `DB_PASSWORD` from `MYSQL_ROOT_PASSWORD`.
 
 ## Project structure
 
-- `user`, `product`, `cart`, and `order`: JPA entities and repositories
-- `api`: controllers, request/response DTOs, mapping, exception handling, OpenAPI metadata
+- `user`, `product`, `cart`, `order`, `payment`: JPA entities and repositories
+- `api`: controllers, DTOs, mapping, exception handling, OpenAPI metadata
 - `service`: application and transaction logic
-- `security`: BCrypt, JWT validation, and role authorization
-- `admin`: administrator endpoints and optional first-admin initialization
+- `security`: BCrypt, JWT validation, role authorization, CORS
+- `admin`: administrator endpoints and optional first-admin seeding
+- `shopsmart-frontend`: React + Vite storefront
 - `src/test`: API integration tests and Mockito unit tests
+
+## Known gaps
+
+- **Razorpay is not implemented.** `PaymentMethod.RAZORPAY`, the payment columns and statuses exist, but checkout currently accepts COD only. A production integration needs order creation, checkout.js on the frontend, and server-side signature verification.
+- There is no admin UI yet; admin operations are available through Swagger/HTTP.
+- Docker image and Render/Aiven deployment configuration exist but have not been verified end-to-end in this environment.

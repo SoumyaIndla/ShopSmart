@@ -244,6 +244,157 @@ class ShopSmartApplicationTests {
                 .andExpect(status().isNotFound());
     }
 
+    @Test
+    void invalidCheckoutPaymentMethodIsRejectedWithBadRequest() throws Exception {
+        String token = registerAndLogin("invalid-method");
+
+        mvc.perform(post("/api/orders")
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"paymentMethod\":\"BITCOIN\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void unknownRouteReturnsNotFoundInsteadOfServerError() throws Exception {
+        String token = registerAndLogin("unknown-route");
+
+        mvc.perform(get("/api/does-not-exist")
+                        .header("Authorization", bearer(token)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void adminUpdatesDeliveryStatusAndOwnerCanTrackIt() throws Exception {
+        String adminToken = login("admin@shopsmart.test", "TestAdmin#2026");
+        String customerToken = registerAndLogin("delivery");
+        Long orderId = createOrder(customerToken, "Delivery Test Item");
+
+        // New orders start at PROCESSING.
+        mvc.perform(get("/api/orders/" + orderId + "/tracking")
+                        .header("Authorization", bearer(customerToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.deliveryStatus").value("PROCESSING"))
+                .andExpect(jsonPath("$.timeline[0].current").value(true));
+
+        // A customer cannot move the delivery status.
+        mvc.perform(patch("/api/admin/orders/" + orderId + "/delivery-status")
+                        .header("Authorization", bearer(customerToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"deliveryStatus\":\"SHIPPED\"}"))
+                .andExpect(status().isForbidden());
+
+        // An admin can.
+        mvc.perform(patch("/api/admin/orders/" + orderId + "/delivery-status")
+                        .header("Authorization", bearer(adminToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"deliveryStatus\":\"SHIPPED\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.deliveryStatus").value("SHIPPED"));
+
+        // The owner sees the updated timeline (index 3 = SHIPPED).
+        mvc.perform(get("/api/orders/" + orderId + "/tracking")
+                        .header("Authorization", bearer(customerToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.deliveryStatus").value("SHIPPED"))
+                .andExpect(jsonPath("$.timeline[3].completed").value(true))
+                .andExpect(jsonPath("$.timeline[4].completed").value(false));
+
+        // Another customer cannot track it.
+        String otherToken = registerAndLogin("other-delivery");
+        mvc.perform(get("/api/orders/" + orderId + "/tracking")
+                        .header("Authorization", bearer(otherToken)))
+                .andExpect(status().isNotFound());
+
+        // An unknown status is a bad request, not a server error.
+        mvc.perform(patch("/api/admin/orders/" + orderId + "/delivery-status")
+                        .header("Authorization", bearer(adminToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"deliveryStatus\":\"TELEPORTED\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void codPaymentIsOwnerScopedAndAdminConfirmed() throws Exception {
+        String adminToken = login("admin@shopsmart.test", "TestAdmin#2026");
+        String customerToken = registerAndLogin("payment");
+        Long orderId = createOrder(customerToken, "Payment Test Item");
+
+        // Owner can read their payment; it starts PENDING.
+        mvc.perform(get("/api/payments/order/" + orderId)
+                        .header("Authorization", bearer(customerToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.method").value("COD"))
+                .andExpect(jsonPath("$.status").value("PENDING"));
+
+        // Another customer gets 404, not someone else's payment.
+        String otherToken = registerAndLogin("other-payment");
+        mvc.perform(get("/api/payments/order/" + orderId)
+                        .header("Authorization", bearer(otherToken)))
+                .andExpect(status().isNotFound());
+
+        // A customer cannot confirm COD.
+        mvc.perform(post("/api/payments/cod/" + orderId + "/confirm")
+                        .header("Authorization", bearer(customerToken)))
+                .andExpect(status().isForbidden());
+
+        // An admin can confirm it exactly once.
+        mvc.perform(post("/api/payments/cod/" + orderId + "/confirm")
+                        .header("Authorization", bearer(adminToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SUCCESS"));
+
+        mvc.perform(get("/api/payments/order/" + orderId)
+                        .header("Authorization", bearer(customerToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SUCCESS"));
+
+        mvc.perform(post("/api/payments/cod/" + orderId + "/confirm")
+                        .header("Authorization", bearer(adminToken)))
+                .andExpect(status().isConflict());
+    }
+
+    private String registerAndLogin(String prefix) throws Exception {
+        String email = prefix + "-" + System.nanoTime() + "@example.test";
+
+        mvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"fullName":"Test User","email":"%s","password":"CustomerPass#2026"}
+                                """.formatted(email)))
+                .andExpect(status().isOk());
+
+        return login(email, "CustomerPass#2026");
+    }
+
+    private Long createOrder(String customerToken, String productName) throws Exception {
+        String adminToken = login("admin@shopsmart.test", "TestAdmin#2026");
+
+        String productJson = mvc.perform(post("/api/products")
+                        .header("Authorization", bearer(adminToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"%s","description":"test product","price":10.00,"stock":5,"category":"Test"}
+                                """.formatted(productName)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        Long productId = ((Number) JsonPath.read(productJson, "$.id")).longValue();
+
+        mvc.perform(post("/api/cart/items")
+                        .header("Authorization", bearer(customerToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"productId\":" + productId + ",\"quantity\":1}"))
+                .andExpect(status().isOk());
+
+        String orderJson = mvc.perform(post("/api/orders")
+                        .header("Authorization", bearer(customerToken)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        return ((Number) JsonPath.read(orderJson, "$.id")).longValue();
+    }
+
     private String login(String email, String password) throws Exception {
         String response = mvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

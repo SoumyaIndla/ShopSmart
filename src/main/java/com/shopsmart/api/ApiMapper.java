@@ -4,6 +4,7 @@ package com.shopsmart.api;
 import com.shopsmart.cart.CartItem;
 import com.shopsmart.order.*;
 import com.shopsmart.product.Product;
+import com.shopsmart.payment.Payment;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -14,7 +15,9 @@ public final class ApiMapper {
 
  private ApiMapper() {}
 
+ // Convert Product entity to ProductResponse
  public static ProductResponse product(Product p) {
+
   return new ProductResponse(
           p.getId(),
           p.getName(),
@@ -26,6 +29,7 @@ public final class ApiMapper {
   );
  }
 
+ // Convert cart items to CartResponse
  public static CartResponse cart(List<CartItem> items) {
 
   var lines = items.stream()
@@ -47,6 +51,7 @@ public final class ApiMapper {
   );
  }
 
+ // Convert CustomerOrder entity to OrderResponse
  public static OrderResponse order(CustomerOrder o) {
 
   var lines = o.getItems().stream()
@@ -70,6 +75,22 @@ public final class ApiMapper {
           o.getCreatedAt(),
           o.getTotal(),
           lines
+  );
+ }
+
+ // Convert Payment entity to PaymentResponse
+ public static PaymentResponse payment(Payment p) {
+
+  return new PaymentResponse(
+          p.getId(),
+          p.getOrder().getId(),
+          p.getMethod().name(),
+          p.getStatus().name(),
+          p.getAmount(),
+          p.getRazorpayOrderId(),
+          p.getRazorpayPaymentId(),
+          p.getCreatedAt(),
+          p.getUpdatedAt()
   );
  }
 }

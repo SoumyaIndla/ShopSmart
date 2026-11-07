@@ -2,6 +2,7 @@
 package com.shopsmart.api;
 
 import com.shopsmart.api.ApiDtos.OrderResponse;
+import com.shopsmart.api.ApiDtos.TrackingResponse;
 import com.shopsmart.payment.PaymentMethod;
 import com.shopsmart.service.OrderService;
 
@@ -52,6 +53,14 @@ public class OrderController {
         return ApiMapper.order(
                 orders.getMine(authentication.getName(), id)
         );
+    }
+
+    @GetMapping("/{id}/tracking")
+    public TrackingResponse tracking(
+            @PathVariable Long id,
+            Authentication authentication) {
+
+        return orders.track(authentication.getName(), id);
     }
 
     @PostMapping("/{id}/cancel")
