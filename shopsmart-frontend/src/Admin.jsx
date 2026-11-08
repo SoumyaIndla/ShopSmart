@@ -36,6 +36,7 @@ function Admin() {
     const [message, setMessage] = useState("");
     const [error, setError] = useState("");
     const [busy, setBusy] = useState(false);
+    const [lastUpdated, setLastUpdated] = useState("");
 
     const auth = useCallback(
         () => ({
@@ -82,6 +83,7 @@ function Admin() {
         try {
             const { data } = await api.get("/api/admin/orders", auth());
             setOrders(data);
+            setLastUpdated(new Date().toLocaleTimeString("en-IN"));
             setError("");
         } catch (err) {
             if (err.response?.status === 401) {
@@ -116,8 +118,8 @@ function Admin() {
         loadOrders();
         loadProducts();
 
-        // Live dashboard: new/cancelled orders appear within 5 seconds.
-        const timer = setInterval(loadOrders, 5000);
+        // Live dashboard: new/cancelled orders and payments appear within 3 seconds.
+        const timer = setInterval(loadOrders, 3000);
 
         return () => clearInterval(timer);
     }, [token, loadOrders, loadProducts]);
@@ -325,12 +327,20 @@ function Admin() {
                     <section>
                         <div className="admin-section-head">
                             <h2>Orders</h2>
-                            <button
-                                className="admin-ghost"
-                                onClick={loadOrders}
-                            >
-                                Refresh
-                            </button>
+                            <div className="admin-head-actions">
+                                <span className="admin-live">
+                                    ● Live
+                                    {lastUpdated
+                                        ? ` · updated ${lastUpdated}`
+                                        : ""}
+                                </span>
+                                <button
+                                    className="admin-ghost"
+                                    onClick={loadOrders}
+                                >
+                                    Refresh
+                                </button>
+                            </div>
                         </div>
 
                         {orders.length === 0 ? (
@@ -345,7 +355,7 @@ function Admin() {
                                             <th>Total</th>
                                             <th>Payment</th>
                                             <th>Order status</th>
-                                            <th>Delivery</th>
+                                            <th>Delivery (update)</th>
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
@@ -371,13 +381,28 @@ function Admin() {
                                                     )}
                                                 </td>
                                                 <td>
-                                                    {order.paymentMethod ??
-                                                        "—"}
-                                                    <br />
-                                                    <small>
-                                                        {order.paymentStatus ??
+                                                    <div>
+                                                        {order.paymentMethod ??
                                                             "—"}
-                                                    </small>
+                                                    </div>
+                                                    {order.paymentStatus && (
+                                                        <span
+                                                            className={
+                                                                "admin-badge " +
+                                                                (order.paymentStatus ===
+                                                                "SUCCESS"
+                                                                    ? "good"
+                                                                    : order.paymentStatus ===
+                                                                        "FAILED"
+                                                                      ? "bad"
+                                                                      : "warn")
+                                                            }
+                                                        >
+                                                            {
+                                                                order.paymentStatus
+                                                            }
+                                                        </span>
+                                                    )}
                                                 </td>
                                                 <td>
                                                     <span
@@ -394,10 +419,12 @@ function Admin() {
                                                 </td>
                                                 <td>
                                                     <select
+                                                        className="admin-delivery-select"
                                                         value={
                                                             order.deliveryStatus
                                                         }
                                                         disabled={busy}
+                                                        title="Change delivery status"
                                                         onChange={(e) =>
                                                             updateDelivery(
                                                                 order.id,
