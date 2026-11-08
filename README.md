@@ -1,4 +1,6 @@
-# ShopSmart â€” Secure E-Commerce Application
+# ShopSmart - Secure E-Commerce Application
+
+> **New here? Read [PROJECT_GUIDE.md](PROJECT_GUIDE.md)** - a beginner-friendly walkthrough of the architecture, every feature, security, the bugs that were fixed, and 35 interview questions with answers.
 
 ShopSmart is a full-stack e-commerce project: a Java 17 / Spring Boot REST API with a React (Vite) storefront. It covers customer accounts, product search, carts, checkout, inventory, COD payments, delivery tracking, and role-based administration.
 
