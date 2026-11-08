@@ -119,8 +119,8 @@ function Admin() {
         loadOrders();
         loadProducts();
 
-        // Live dashboard: new/cancelled orders and payments appear within 3 seconds.
-        const timer = setInterval(loadOrders, 3000);
+        // Live dashboard: new/cancelled orders appear within 10 seconds.
+        const timer = setInterval(loadOrders, 10000);
 
         return () => clearInterval(timer);
     }, [token, loadOrders, loadProducts]);

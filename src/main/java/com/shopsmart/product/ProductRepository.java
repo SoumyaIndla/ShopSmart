@@ -1,6 +1,5 @@
 package com.shopsmart.product;
 
-import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import java.util.Optional;
@@ -16,11 +15,14 @@ public interface ProductRepository extends JpaRepository<Product,Long> {
     Page<Product> findByActiveTrueAndNameContainingIgnoreCaseAndCategoryIgnoreCase(String name, String category, Pageable pageable);
     @Query("select distinct p.category from Product p where p.active = true order by p.category")
     List<String> findActiveCategories();
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select p from Product p where p.id = :id and p.active = true")
+
+    /*
+     * Native FOR UPDATE avoids Hibernate's "FOR UPDATE OF alias" syntax,
+     * which MySQL supports but TiDB does not.
+     */
+    @Query(value = "select * from products where id = :id and active = true for update", nativeQuery = true)
     Optional<Product> findActiveByIdForUpdate(@Param("id") Long id);
 
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select p from Product p where p.id = :id")
+    @Query(value = "select * from products where id = :id for update", nativeQuery = true)
     Optional<Product> findByIdForUpdate(@Param("id") Long id);
 }
