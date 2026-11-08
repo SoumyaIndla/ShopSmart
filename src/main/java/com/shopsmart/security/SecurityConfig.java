@@ -105,6 +105,12 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/",
                                 "/index.html",
+                                "/admin",
+                                "/admin/**",
+                                "/assets/**",
+                                "/favicon.svg",
+                                "/placeholder.svg",
+                                "/icons.svg",
                                 "/api/auth/register",
                                 "/api/auth/login",
                                 "/swagger-ui/**",
