@@ -74,7 +74,9 @@ public final class ApiMapper {
           payment != null ? payment.getStatus().name() : null,
           o.getCreatedAt(),
           o.getTotal(),
-          lines
+          lines,
+          o.getUser().getEmail(),
+          o.getUser().getFullName()
   );
  }
 

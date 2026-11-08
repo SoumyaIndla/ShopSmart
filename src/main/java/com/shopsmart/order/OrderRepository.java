@@ -17,10 +17,10 @@ public interface OrderRepository extends JpaRepository<CustomerOrder, Long> {
      * "items", "items.product" and "payment" associations must be fetched up
      * front, otherwise Hibernate throws LazyInitializationException (HTTP 500).
      */
-    @EntityGraph(attributePaths = {"items", "items.product", "payment"})
+    @EntityGraph(attributePaths = {"items", "items.product", "payment", "user"})
     List<CustomerOrder> findByUserEmailOrderByCreatedAtDesc(String email);
 
-    @EntityGraph(attributePaths = {"items", "items.product", "payment"})
+    @EntityGraph(attributePaths = {"items", "items.product", "payment", "user"})
     Optional<CustomerOrder> findByIdAndUserEmail(Long id, String email);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
@@ -28,6 +28,6 @@ public interface OrderRepository extends JpaRepository<CustomerOrder, Long> {
 
     // Used by the admin order list. It is mapped to DTOs outside a transaction.
     @Override
-    @EntityGraph(attributePaths = {"items", "items.product", "payment"})
+    @EntityGraph(attributePaths = {"items", "items.product", "payment", "user"})
     List<CustomerOrder> findAll();
 }

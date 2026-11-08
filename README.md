@@ -1,4 +1,4 @@
-﻿# ShopSmart â€” Secure E-Commerce Application
+# ShopSmart â€” Secure E-Commerce Application
 
 ShopSmart is a full-stack e-commerce project: a Java 17 / Spring Boot REST API with a React (Vite) storefront. It covers customer accounts, product search, carts, checkout, inventory, COD payments, delivery tracking, and role-based administration.
 
@@ -111,6 +111,7 @@ The React storefront (`shopsmart-frontend`) includes:
 - Cart with quantity updates and removal
 - Checkout with **Cash on Delivery** or **UPI/Card via Razorpay** (checkout.js popup + server-side signature verification)
 - **My Orders** page with payment status, delivery status and a tracking timeline
+- **Separate admin console at `/admin`** — live order dashboard (polls every 5 s), delivery-status updates, COD confirmation, product listing/deactivation, and an add-product form with image preview
 
 The production build is verified with `npm run build` and `npm run lint`.
 

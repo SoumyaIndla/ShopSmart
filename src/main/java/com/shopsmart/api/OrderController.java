@@ -68,8 +68,11 @@ public class OrderController {
             @PathVariable Long id,
             Authentication authentication) {
 
+        orders.cancel(authentication.getName(), id);
+
+        // Re-read with the entity graph so lazy fields map outside the transaction.
         return ApiMapper.order(
-                orders.cancel(authentication.getName(), id)
+                orders.getMine(authentication.getName(), id)
         );
     }
 }

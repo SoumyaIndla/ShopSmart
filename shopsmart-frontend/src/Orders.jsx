@@ -71,6 +71,10 @@ function Orders({ onBack }) {
         }
     }
 
+    function canTrack(order) {
+        return order.status !== "CANCELLED";
+    }
+
     function canCancel(order) {
         if (order.status === "CANCELLED") return false;
 
@@ -181,12 +185,14 @@ function Orders({ onBack }) {
                             </dl>
 
                             <div className="order-actions">
-                                <button
-                                    className="checkout-button"
-                                    onClick={() => handleTrack(order.id)}
-                                >
-                                    Track Order
-                                </button>
+                                {canTrack(order) && (
+                                    <button
+                                        className="checkout-button"
+                                        onClick={() => handleTrack(order.id)}
+                                    >
+                                        Track Order
+                                    </button>
+                                )}
 
                                 {canCancel(order) && (
                                     <button

@@ -126,7 +126,9 @@ public final class ApiDtos {
          String paymentStatus,
          Instant createdAt,
          BigDecimal total,
-         List<OrderLineResponse> items
+         List<OrderLineResponse> items,
+         String customerEmail,
+         String customerName
  ) {}
 
  // Payment response
