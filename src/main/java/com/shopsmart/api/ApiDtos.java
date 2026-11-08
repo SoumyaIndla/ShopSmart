@@ -142,6 +142,25 @@ public final class ApiDtos {
          Instant updatedAt
  ) {}
 
+ // Razorpay checkout handshake (key id + order id for checkout.js)
+ public record RazorpayOrderResponse(
+         String keyId,
+         String razorpayOrderId,
+         long amount,
+         String currency,
+         Long orderId,
+         String name,
+         String email,
+         String description
+ ) {}
+
+ // Razorpay signature returned by checkout.js
+ public record RazorpayVerifyRequest(
+         @NotBlank String razorpayOrderId,
+         @NotBlank String razorpayPaymentId,
+         @NotBlank String razorpaySignature
+ ) {}
+
  // Delivery status update (ADMIN only)
  public record DeliveryStatusUpdateRequest(
          @NotNull com.shopsmart.order.DeliveryStatus deliveryStatus

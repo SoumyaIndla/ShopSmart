@@ -17,11 +17,10 @@ function ProductDetail({ product, onClose, onAdd }) {
 
                 <img
                     className="detail-image"
-                    src={product.imageUrl}
+                    src={product.imageUrl || "/placeholder.svg"}
                     alt={product.name}
                     onError={(event) => {
-                        event.currentTarget.src =
-                            "https://placehold.co/600x400?text=ShopSmart";
+                        event.currentTarget.src = "/placeholder.svg";
                     }}
                 />
 

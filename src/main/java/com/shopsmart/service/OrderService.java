@@ -43,10 +43,10 @@ public class OrderService {
     @Transactional
     public CustomerOrder checkout(String email, PaymentMethod paymentMethod) {
 
-        if (paymentMethod != PaymentMethod.COD) {
+        if (paymentMethod == null) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "Currently only Cash on Delivery is available"
+                    "Payment method is required"
             );
         }
 

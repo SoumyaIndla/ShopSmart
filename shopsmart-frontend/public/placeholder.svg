@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="450" viewBox="0 0 600 450">
+  <rect width="600" height="450" fill="#eef2ff"/>
+  <circle cx="300" cy="190" r="70" fill="#c7d2fe"/>
+  <path d="M275 160h50l8 70h-66z" fill="#2563eb"/>
+  <path d="M287 160c0-16 26-16 26 0" stroke="#2563eb" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <text x="300" y="320" font-family="Arial, sans-serif" font-size="30" font-weight="bold" fill="#1e3a8a" text-anchor="middle">ShopSmart</text>
+  <text x="300" y="352" font-family="Arial, sans-serif" font-size="18" fill="#64748b" text-anchor="middle">Image unavailable</text>
+</svg>

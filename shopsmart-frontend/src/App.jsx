@@ -252,6 +252,72 @@ function App() {
         setShowOrders(true);
     }
 
+    // Load the Razorpay checkout script on demand
+    function loadRazorpayScript() {
+        return new Promise((resolve, reject) => {
+            if (window.Razorpay) {
+                resolve();
+                return;
+            }
+
+            const script = document.createElement("script");
+            script.src = "https://checkout.razorpay.com/v1/checkout.js";
+            script.onload = () => resolve();
+            script.onerror = () =>
+                reject(new Error("Unable to load Razorpay checkout"));
+            document.body.appendChild(script);
+        });
+    }
+
+    // Create a Razorpay order and open the payment popup
+    async function startRazorpayPayment(order) {
+        await loadRazorpayScript();
+
+        const { data } = await api.post(
+            `/api/payments/razorpay/order/${order.id}`,
+            {},
+            getAuthConfig()
+        );
+
+        return new Promise((resolve, reject) => {
+            const checkout = new window.Razorpay({
+                key: data.keyId,
+                amount: data.amount,
+                currency: data.currency,
+                name: data.name,
+                description: data.description,
+                order_id: data.razorpayOrderId,
+                prefill: {
+                    name: user?.fullName || "",
+                    email: data.email,
+                },
+                theme: { color: "#2563eb" },
+                handler: async (response) => {
+                    try {
+                        await api.post(
+                            "/api/payments/razorpay/verify",
+                            {
+                                razorpayOrderId: response.razorpay_order_id,
+                                razorpayPaymentId: response.razorpay_payment_id,
+                                razorpaySignature: response.razorpay_signature,
+                            },
+                            getAuthConfig()
+                        );
+                        resolve();
+                    } catch (err) {
+                        reject(err);
+                    }
+                },
+                modal: {
+                    ondismiss: () =>
+                        reject(new Error("Payment was cancelled")),
+                },
+            });
+
+            checkout.open();
+        });
+    }
+
     // Checkout
     async function handleCheckout() {
         if (cart.items.length === 0) {
@@ -271,8 +337,26 @@ function App() {
                 getAuthConfig()
             );
 
+            const created = response.data;
+
+            if (paymentMethod === "RAZORPAY") {
+                try {
+                    await startRazorpayPayment(created);
+                    created.paymentStatus = "SUCCESS";
+                } catch (paymentError) {
+                    setCartMessage(
+                        `Order #${created.id} was created, but the payment was not completed. ` +
+                        (paymentError.response?.data?.message ||
+                            paymentError.message)
+                    );
+                    setShowCart(false);
+                    setOrder(null);
+                    return;
+                }
+            }
+
             // Save the successful order response
-            setOrder(response.data);
+            setOrder(created);
 
             // Clear the frontend cart
             setCart({ items: [], total: 0 });
@@ -545,8 +629,25 @@ function App() {
                                         Cash on Delivery (COD)
                                     </label>
 
+                                    <label>
+                                        <input
+                                            type="radio"
+                                            name="payment"
+                                            value="RAZORPAY"
+                                            checked={
+                                                paymentMethod === "RAZORPAY"
+                                            }
+                                            onChange={(e) =>
+                                                setPaymentMethod(e.target.value)
+                                            }
+                                        />
+                                        UPI / Card / Netbanking (Razorpay)
+                                    </label>
+
                                     <p className="payment-note">
-                                        Pay when your order is delivered.
+                                        {paymentMethod === "COD"
+                                            ? "Pay when your order is delivered."
+                                            : "You will be redirected to the secure Razorpay payment window."}
                                     </p>
 
                                     <button
@@ -636,11 +737,10 @@ function App() {
                                     onClick={() => setSelectedProduct(product)}
                                 >
                                     <img
-                                        src={product.imageUrl}
+                                        src={product.imageUrl || "/placeholder.svg"}
                                         alt={product.name}
                                         onError={(e) => {
-                                            e.currentTarget.src =
-                                                "https://placehold.co/400x300?text=ShopSmart";
+                                            e.currentTarget.src = "/placeholder.svg";
                                         }}
                                     />
 

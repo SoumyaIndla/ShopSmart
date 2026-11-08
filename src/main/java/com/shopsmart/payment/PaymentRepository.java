@@ -14,4 +14,10 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
             Long orderId,
             String email
     );
+
+    // Find a Razorpay payment only when it belongs to this customer
+    Optional<Payment> findByRazorpayOrderIdAndOrder_User_Email(
+            String razorpayOrderId,
+            String email
+    );
 }

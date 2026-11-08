@@ -1,4 +1,4 @@
-# ShopSmart — Secure E-Commerce Application
+﻿# ShopSmart â€” Secure E-Commerce Application
 
 ShopSmart is a full-stack e-commerce project: a Java 17 / Spring Boot REST API with a React (Vite) storefront. It covers customer accounts, product search, carts, checkout, inventory, COD payments, delivery tracking, and role-based administration.
 
@@ -9,9 +9,9 @@ ShopSmart is a full-stack e-commerce project: a Java 17 / Spring Boot REST API w
 
 1. Install JDK 17 and MySQL 8, and make sure the MySQL service is running.
 2. Copy `.env.example` to `.env` in the project root and fill in:
-   - `DB_PASSWORD` — your local MySQL password
-   - `JWT_SECRET` — a long random string (32+ characters)
-   - `ADMIN_EMAIL` / `ADMIN_PASSWORD` — optional first administrator
+   - `DB_PASSWORD` â€” your local MySQL password
+   - `JWT_SECRET` â€” a long random string (32+ characters)
+   - `ADMIN_EMAIL` / `ADMIN_PASSWORD` â€” optional first administrator
 3. Start the backend from the project root:
 
    ```powershell
@@ -47,6 +47,7 @@ No credentials are committed. `application.properties` reads everything from the
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | empty | Optional initial administrator |
 | `PORT` | `8080` | HTTP port |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:5173` | Comma-separated frontend origins allowed by CORS |
+| `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` | empty | Razorpay API keys (test or live) |
 
 The frontend reads `VITE_API_URL` at build time (see `shopsmart-frontend/.env.example`).
 
@@ -77,6 +78,8 @@ JSON requests use `Content-Type: application/json`. After login, send `Authoriza
 | GET | `/api/orders/{id}/tracking` | Owner | Delivery status and timeline |
 | GET | `/api/payments/order/{orderId}` | Owner | Payment for own order |
 | POST | `/api/payments/cod/{orderId}/confirm` | Admin | Mark a COD payment as collected |
+| POST | `/api/payments/razorpay/order/{orderId}` | Owner | Create a Razorpay order for the checkout popup |
+| POST | `/api/payments/razorpay/verify` | Owner | Verify the Razorpay signature and mark the payment paid |
 | GET | `/api/admin/users` | Admin | Registered customers and admins |
 | GET | `/api/admin/orders` | Admin | All orders |
 | GET | `/api/admin/products`, `/api/admin/products/{id}` | Admin | All products, including deactivated |
@@ -89,13 +92,13 @@ JSON requests use `Content-Type: application/json`. After login, send `Authoriza
 - Admin-only actions return **403** for authenticated customers and **401** when no token is present.
 - Checkout locks inventory rows and runs in one transaction. Stock is reduced atomically, and a failed checkout leaves the cart untouched.
 - A cancelled order restores stock once; a second cancellation, cancelling a shipped order, or confirming a COD payment on a cancelled order returns **409**.
-- Order status follows the delivery lifecycle (`PLACED → CONFIRMED → PACKED → SHIPPED → OUT_FOR_DELIVERY → DELIVERED`). Customers may cancel until the parcel is shipped.
+- Order status follows the delivery lifecycle (`PLACED â†’ CONFIRMED â†’ PACKED â†’ SHIPPED â†’ OUT_FOR_DELIVERY â†’ DELIVERED`). Customers may cancel until the parcel is shipped.
 - Product deletion is a soft deactivation so historical orders stay readable.
 - Malformed bodies return **400**, unknown routes **404**, wrong methods **405**, unsupported content types **415**, and genuine server errors **500** (logged server-side without leaking internals).
 
 ### Delivery lifecycle
 
-`PROCESSING → CONFIRMED → PACKED → SHIPPED → OUT_FOR_DELIVERY → DELIVERED`
+`PROCESSING â†’ CONFIRMED â†’ PACKED â†’ SHIPPED â†’ OUT_FOR_DELIVERY â†’ DELIVERED`
 
 `RETURNED` is available as an exceptional final state. The customer tracking endpoint returns the current status plus a completed/current flag for each step.
 
@@ -104,9 +107,9 @@ JSON requests use `Content-Type: application/json`. After login, send `Authoriza
 The React storefront (`shopsmart-frontend`) includes:
 
 - Customer registration and login with JWT stored in `sessionStorage`
-- Product catalogue with search-ready API integration
+- Product catalogue with search, category filter, product-detail modal and image fallback
 - Cart with quantity updates and removal
-- COD checkout and an order confirmation screen
+- Checkout with **Cash on Delivery** or **UPI/Card via Razorpay** (checkout.js popup + server-side signature verification)
 - **My Orders** page with payment status, delivery status and a tracking timeline
 
 The production build is verified with `npm run build` and `npm run lint`.
@@ -115,7 +118,7 @@ The production build is verified with `npm run build` and `npm run lint`.
 
 1. Create a free Aiven MySQL service and note the host, port, user, password and database name.
 2. Push the repository to GitHub.
-3. In Render, choose **New → Blueprint** and select the repository. `render.yaml` creates the web service.
+3. In Render, choose **New â†’ Blueprint** and select the repository. `render.yaml` creates the web service.
 4. Fill the environment values:
    - `DB_URL` = `jdbc:mysql://HOST:PORT/DB?useSSL=true&requireSSL=true&serverTimezone=UTC`
    - `DB_USERNAME`, `DB_PASSWORD`
@@ -133,7 +136,7 @@ Render's free tier sleeps after inactivity, so the first request can take around
 .\mvnw.cmd test
 ```
 
-Integration tests run against an isolated in-memory H2 database and do not need MySQL. They cover registration/login, logout invalidation, product authorization and search, cart quantity rules, checkout and stock checks, cancellation/restocking, order privacy, payment ownership, admin-only COD confirmation, delivery status updates and tracking, plus 400/404/415 error mapping. A Mockito unit test covers product filtering. Current suite: **14 tests passing**.
+Integration tests run against an isolated in-memory H2 database and do not need MySQL. They cover registration/login, logout invalidation, product authorization and search, cart quantity rules, checkout and stock checks, cancellation/restocking, order privacy, payment ownership, admin-only COD confirmation, delivery status updates and tracking, plus 400/404/415 error mapping. A Mockito unit test covers product filtering. Current suite: **16 tests passing**.
 
 ## Docker (optional)
 
@@ -157,6 +160,7 @@ Docker Compose runs MySQL on host port `3307` and the API on `8080`. The app con
 
 ## Known gaps
 
-- **Razorpay is not implemented.** `PaymentMethod.RAZORPAY`, the payment columns and statuses exist, but checkout currently accepts COD only. A production integration needs order creation, checkout.js on the frontend, and server-side signature verification.
+- **Razorpay works with test keys** â€” checkout shows COD or UPI/Card/Netbanking. The backend creates the Razorpay order, the frontend opens Razorpay Checkout, and the signature is verified server-side before the payment is marked `SUCCESS`. A real money capture has not been tested.
 - There is no admin UI yet; admin operations are available through Swagger/HTTP.
 - Docker image and Render/Aiven deployment configuration exist but have not been verified end-to-end in this environment.
+

@@ -1,6 +1,7 @@
 package com.shopsmart;
 
 import com.jayway.jsonpath.JsonPath;
+import com.shopsmart.payment.PaymentRepository;
 import com.shopsmart.product.ProductRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,12 +15,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class ShopSmartApplicationTests {
     @Autowired MockMvc mvc;
     @Autowired ProductRepository products;
+    @Autowired PaymentRepository payments;
 
     @Test
     void storefrontIsPubliclyAvailable() throws Exception {
@@ -366,6 +372,67 @@ class ShopSmartApplicationTests {
                 .andExpect(status().isConflict());
     }
 
+    @Test
+    void razorpaySignatureMarksPaymentSuccessful() throws Exception {
+        String token = registerAndLogin("razorpay-ok");
+        Long orderId = createOrder(token, "Razorpay OK Item", "RAZORPAY");
+
+        var payment = payments.findByOrderId(orderId).orElseThrow();
+        payment.setRazorpayOrderId("order_test_ok");
+        payments.save(payment);
+
+        String signature = hmacHex(
+                "order_test_ok|pay_test_ok",
+                "shopsmart-test-razorpay-secret"
+        );
+
+        mvc.perform(post("/api/payments/razorpay/verify")
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"razorpayOrderId":"order_test_ok","razorpayPaymentId":"pay_test_ok","razorpaySignature":"%s"}
+                                """.formatted(signature)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.method").value("RAZORPAY"))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
+                .andExpect(jsonPath("$.razorpayPaymentId").value("pay_test_ok"));
+    }
+
+    @Test
+    void razorpayWithBadSignatureIsRejected() throws Exception {
+        String token = registerAndLogin("razorpay-bad");
+        Long orderId = createOrder(token, "Razorpay Bad Item", "RAZORPAY");
+
+        var payment = payments.findByOrderId(orderId).orElseThrow();
+        payment.setRazorpayOrderId("order_test_bad");
+        payments.save(payment);
+
+        mvc.perform(post("/api/payments/razorpay/verify")
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"razorpayOrderId":"order_test_bad","razorpayPaymentId":"pay_test_bad","razorpaySignature":"deadbeef"}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    private String hmacHex(String payload, String secret) throws Exception {
+        Mac mac = Mac.getInstance("HmacSHA256");
+        mac.init(new SecretKeySpec(
+                secret.getBytes(StandardCharsets.UTF_8),
+                "HmacSHA256"
+        ));
+
+        byte[] hash = mac.doFinal(payload.getBytes(StandardCharsets.UTF_8));
+        StringBuilder hex = new StringBuilder();
+
+        for (byte b : hash) {
+            hex.append(String.format("%02x", b));
+        }
+
+        return hex.toString();
+    }
+
     private String registerAndLogin(String prefix) throws Exception {
         String email = prefix + "-" + System.nanoTime() + "@example.test";
 
@@ -380,6 +447,14 @@ class ShopSmartApplicationTests {
     }
 
     private Long createOrder(String customerToken, String productName) throws Exception {
+        return createOrder(customerToken, productName, "COD");
+    }
+
+    private Long createOrder(
+            String customerToken,
+            String productName,
+            String paymentMethod) throws Exception {
+
         String adminToken = login("admin@shopsmart.test", "TestAdmin#2026");
 
         String productJson = mvc.perform(post("/api/products")
@@ -400,7 +475,9 @@ class ShopSmartApplicationTests {
                 .andExpect(status().isOk());
 
         String orderJson = mvc.perform(post("/api/orders")
-                        .header("Authorization", bearer(customerToken)))
+                        .header("Authorization", bearer(customerToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"paymentMethod\":\"" + paymentMethod + "\"}"))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
