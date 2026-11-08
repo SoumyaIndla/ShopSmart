@@ -27,6 +27,8 @@ function App() {
     const [category, setCategory] = useState("");
     const [categories, setCategories] = useState([]);
     const [selectedProduct, setSelectedProduct] = useState(null);
+    const [sort, setSort] = useState("name-asc");
+    const [cartToast, setCartToast] = useState(false);
 
     const [user, setUser] = useState(() => {
         try {
@@ -60,11 +62,13 @@ function App() {
             setLoading(true);
             setError("");
 
+            const [sortBy, direction] = sort.split("-");
+
             const params = {
                 page: 0,
-                size: 20,
-                sortBy: "name",
-                direction: "asc",
+                size: 50,
+                sortBy: sortBy,
+                direction: direction,
             };
 
             if (searchTerm.trim()) params.search = searchTerm.trim();
@@ -82,7 +86,7 @@ function App() {
         }, 250);
 
         return () => clearTimeout(timer);
-    }, [searchTerm, category]);
+    }, [searchTerm, category, sort]);
 
     // Load cart from backend
     async function loadCart() {
@@ -168,6 +172,9 @@ function App() {
             );
 
             setCartMessage("Product successfully added to your cart!");
+            setCartToast(true);
+
+            window.setTimeout(() => setCartToast(false), 4000);
 
             if (showCart) {
                 await loadCart();
@@ -719,6 +726,28 @@ function App() {
                                     </option>
                                 ))}
                             </select>
+
+                            <select
+                                value={sort}
+                                onChange={(event) =>
+                                    setSort(event.target.value)
+                                }
+                                aria-label="Sort products"
+                            >
+                                <option value="name-asc">Name: A–Z</option>
+                                <option value="price-asc">
+                                    Price: Low to High
+                                </option>
+                                <option value="price-desc">
+                                    Price: High to Low
+                                </option>
+                                <option value="category-asc">
+                                    Category: A–Z
+                                </option>
+                                <option value="stock-desc">
+                                    Stock: High to Low
+                                </option>
+                            </select>
                         </div>
 
                         {cartMessage && (
@@ -777,6 +806,29 @@ function App() {
                         )}
                     </main>
                 </>
+            )}
+
+            {cartToast && (
+                <div className="cart-toast">
+                    <span>Added to cart</span>
+
+                    <button
+                        onClick={() => {
+                            setCartToast(false);
+                            handleOpenCart();
+                        }}
+                    >
+                        View Cart →
+                    </button>
+
+                    <button
+                        className="cart-toast-close"
+                        onClick={() => setCartToast(false)}
+                        aria-label="Close"
+                    >
+                        ✕
+                    </button>
+                </div>
             )}
 
             <ProductDetail

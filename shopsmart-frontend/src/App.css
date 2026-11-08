@@ -616,3 +616,51 @@ footer h2 {
     transform: translateY(-3px);
     transition: transform 0.15s ease;
 }
+
+/* Add-to-cart toast with a direct View Cart action */
+.cart-toast {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 60;
+    background: #0f172a;
+    color: #fff;
+    padding: 14px 16px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 12px 30px #00000040;
+    font-size: 14px;
+}
+
+.cart-toast > button {
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    padding: 9px 14px;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.cart-toast > button:hover {
+    background: #1d4ed8;
+}
+
+.cart-toast .cart-toast-close {
+    background: transparent;
+    color: #cbd5e1;
+    padding: 4px 6px;
+    font-size: 15px;
+}
+
+@media (max-width: 600px) {
+    .cart-toast {
+        left: 16px;
+        right: 16px;
+        bottom: 16px;
+        justify-content: space-between;
+    }
+}
