@@ -33,6 +33,7 @@ function Admin() {
     const [orders, setOrders] = useState([]);
     const [products, setProducts] = useState([]);
     const [form, setForm] = useState(EMPTY_PRODUCT);
+    const [editingId, setEditingId] = useState(null);
     const [message, setMessage] = useState("");
     const [error, setError] = useState("");
     const [busy, setBusy] = useState(false);
@@ -166,34 +167,63 @@ function Admin() {
         }
     }
 
-    async function addProduct(event) {
+    function startEdit(product) {
+        setEditingId(product.id);
+        setForm({
+            name: product.name || "",
+            description: product.description || "",
+            price: String(product.price ?? ""),
+            stock: String(product.stock ?? ""),
+            category: product.category || "",
+            imageUrl: product.imageUrl || "",
+        });
+        setMessage("");
+        setError("");
+        setTab("add");
+    }
+
+    function resetForm() {
+        setEditingId(null);
+        setForm(EMPTY_PRODUCT);
+    }
+
+    async function saveProduct(event) {
         event.preventDefault();
         setBusy(true);
         setMessage("");
         setError("");
 
-        try {
-            await api.post(
-                "/api/products",
-                {
-                    name: form.name,
-                    description: form.description,
-                    price: Number(form.price),
-                    stock: Number(form.stock),
-                    category: form.category,
-                    imageUrl: form.imageUrl,
-                },
-                auth()
-            );
+        const payload = {
+            name: form.name,
+            description: form.description,
+            price: Number(form.price),
+            stock: Number(form.stock),
+            category: form.category,
+            imageUrl: form.imageUrl,
+        };
 
-            setForm(EMPTY_PRODUCT);
-            setMessage("Product added successfully.");
+        try {
+            if (editingId) {
+                await api.put(
+                    `/api/products/${editingId}`,
+                    payload,
+                    auth()
+                );
+                setMessage("Product updated successfully.");
+            } else {
+                await api.post("/api/products", payload, auth());
+                setMessage("Product added successfully.");
+            }
+
+            resetForm();
             await loadProducts();
             setTab("products");
         } catch (err) {
             setError(
                 err.response?.data?.message ||
-                "Unable to add the product."
+                (editingId
+                    ? "Unable to update the product."
+                    : "Unable to add the product.")
             );
         } finally {
             setBusy(false);
@@ -299,7 +329,7 @@ function Admin() {
                 {[
                     ["orders", "Orders"],
                     ["products", "Products"],
-                    ["add", "Add Product"],
+                    ["add", "Add / Edit Product"],
                 ].map(([key, label]) => (
                     <button
                         key={key}
@@ -490,7 +520,10 @@ function Admin() {
                             <h2>Products</h2>
                             <button
                                 className="admin-primary small"
-                                onClick={() => setTab("add")}
+                                onClick={() => {
+                                    resetForm();
+                                    setTab("add");
+                                }}
                             >
                                 + Add product
                             </button>
@@ -533,19 +566,30 @@ function Admin() {
                                                 : "Deactivated"}
                                         </p>
 
-                                        {product.active && (
+                                        <div className="admin-row-actions">
                                             <button
-                                                className="admin-danger small"
-                                                disabled={busy}
+                                                className="admin-ghost small"
                                                 onClick={() =>
-                                                    deactivateProduct(
-                                                        product.id
-                                                    )
+                                                    startEdit(product)
                                                 }
                                             >
-                                                Deactivate
+                                                Edit
                                             </button>
-                                        )}
+
+                                            {product.active && (
+                                                <button
+                                                    className="admin-danger small"
+                                                    disabled={busy}
+                                                    onClick={() =>
+                                                        deactivateProduct(
+                                                            product.id
+                                                        )
+                                                    }
+                                                >
+                                                    Deactivate
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 </article>
                             ))}
@@ -555,9 +599,9 @@ function Admin() {
 
                 {tab === "add" && (
                     <section>
-                        <h2>Add Product</h2>
+                        <h2>{editingId ? "Edit Product" : "Add Product"}</h2>
 
-                        <form className="admin-form" onSubmit={addProduct}>
+                        <form className="admin-form" onSubmit={saveProduct}>
                             <label>
                                 Name
                                 <input
@@ -662,13 +706,32 @@ function Admin() {
                                 />
                             )}
 
-                            <button
-                                className="admin-primary"
-                                type="submit"
-                                disabled={busy}
-                            >
-                                {busy ? "Saving..." : "Save product"}
-                            </button>
+                            <div className="admin-form-actions">
+                                <button
+                                    className="admin-primary"
+                                    type="submit"
+                                    disabled={busy}
+                                >
+                                    {busy
+                                        ? "Saving..."
+                                        : editingId
+                                          ? "Update product"
+                                          : "Save product"}
+                                </button>
+
+                                {editingId && (
+                                    <button
+                                        type="button"
+                                        className="admin-ghost"
+                                        onClick={() => {
+                                            resetForm();
+                                            setTab("products");
+                                        }}
+                                    >
+                                        Cancel
+                                    </button>
+                                )}
+                            </div>
                         </form>
                     </section>
                 )}

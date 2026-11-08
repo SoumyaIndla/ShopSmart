@@ -486,3 +486,32 @@ html.admin-route #root {
     color: #0f172a;
     background-color: #fff;
 }
+
+.admin-row-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+}
+
+.admin-form-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.admin-form-actions .admin-ghost {
+    color: #0f172a;
+    border-color: #cbd5e1;
+}
+
+.admin-row-actions .admin-ghost {
+    color: #0f172a;
+    border-color: #cbd5e1;
+    background: #fff;
+    padding: 7px 12px;
+    font-size: 13px;
+    border-radius: 8px;
+    cursor: pointer;
+}
