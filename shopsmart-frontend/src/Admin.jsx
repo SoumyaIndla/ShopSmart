@@ -222,8 +222,11 @@ function Admin() {
         return (
             <div className="admin-login">
                 <form className="admin-login-card" onSubmit={handleLogin}>
+                    <div className="admin-logo">S</div>
                     <h1>ShopSmart Admin</h1>
-                    <p>Sign in with an administrator account.</p>
+                    <p className="admin-login-sub">
+                        Sign in to manage orders, payments and products.
+                    </p>
 
                     <label>
                         Email
@@ -231,6 +234,8 @@ function Admin() {
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
+                            autoComplete="username"
+                            placeholder="admin@shopsmart.com"
                             required
                         />
                     </label>
@@ -241,6 +246,8 @@ function Admin() {
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
+                            autoComplete="current-password"
+                            placeholder="Enter your password"
                             required
                         />
                     </label>
@@ -501,6 +508,8 @@ function Admin() {
                                             "/placeholder.svg"
                                         }
                                         alt={product.name}
+                                        loading="lazy"
+                                        decoding="async"
                                         onError={(e) => {
                                             e.currentTarget.src =
                                                 "/placeholder.svg";

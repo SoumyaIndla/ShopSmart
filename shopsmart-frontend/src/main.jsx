@@ -6,6 +6,10 @@ import Admin from './Admin.jsx'
 
 const isAdmin = window.location.pathname.startsWith('/admin')
 
+if (isAdmin) {
+  document.documentElement.classList.add('admin-route')
+}
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     {isAdmin ? <Admin /> : <App />}

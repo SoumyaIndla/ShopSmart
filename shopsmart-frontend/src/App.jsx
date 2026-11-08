@@ -739,6 +739,8 @@ function App() {
                                     <img
                                         src={product.imageUrl || "/placeholder.svg"}
                                         alt={product.name}
+                                        loading="lazy"
+                                        decoding="async"
                                         onError={(e) => {
                                             e.currentTarget.src = "/placeholder.svg";
                                         }}

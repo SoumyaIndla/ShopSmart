@@ -592,7 +592,14 @@ footer h2 {
     border-radius: 10px;
     font-size: 15px;
     background: white;
+    color: #0f172a;
     min-width: 220px;
+    color-scheme: light;
+}
+
+.catalog-controls select option {
+    color: #0f172a;
+    background: white;
 }
 
 .catalog-controls input:focus,
