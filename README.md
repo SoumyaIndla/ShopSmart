@@ -46,6 +46,9 @@ No credentials are committed. `application.properties` reads everything from the
 | `JWT_EXPIRATION_MS` | `86400000` | Token lifetime (24 h) |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | empty | Optional initial administrator |
 | `PORT` | `8080` | HTTP port |
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:5173` | Comma-separated frontend origins allowed by CORS |
+
+The frontend reads `VITE_API_URL` at build time (see `shopsmart-frontend/.env.example`).
 
 `ddl-auto=update` is convenient for local development. For a real deployment, use a dedicated database user and a migration tool such as Flyway.
 
@@ -106,6 +109,22 @@ The React storefront (`shopsmart-frontend`) includes:
 - **My Orders** page with payment status, delivery status and a tracking timeline
 
 The production build is verified with `npm run build` and `npm run lint`.
+
+## Deploy (Render + Aiven MySQL)
+
+1. Create a free Aiven MySQL service and note the host, port, user, password and database name.
+2. Push the repository to GitHub.
+3. In Render, choose **New → Blueprint** and select the repository. `render.yaml` creates the web service.
+4. Fill the environment values:
+   - `DB_URL` = `jdbc:mysql://HOST:PORT/DB?useSSL=true&requireSSL=true&serverTimezone=UTC`
+   - `DB_USERNAME`, `DB_PASSWORD`
+   - `ADMIN_EMAIL`, `ADMIN_PASSWORD`
+   - `CORS_ALLOWED_ORIGINS` = your deployed frontend URL (also keep `http://localhost:5173` while testing)
+5. Deploy and open `https://<service>.onrender.com/api/products` to confirm it is live.
+6. Deploy `shopsmart-frontend` to Vercel or Netlify: build command `npm ci && npm run build`, publish directory `dist`, environment variable `VITE_API_URL=https://<service>.onrender.com`.
+7. Add the frontend URL to `CORS_ALLOWED_ORIGINS` on Render and redeploy the backend.
+
+Render's free tier sleeps after inactivity, so the first request can take around 30 seconds.
 
 ## Tests
 
