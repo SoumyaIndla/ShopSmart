@@ -573,3 +573,39 @@ footer h2 {
     padding: 25px 15px;
   }
 }
+
+/* ========================================
+   CATALOG SEARCH + FILTERS
+======================================== */
+
+.catalog-controls {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 18px 0 24px;
+}
+
+.catalog-controls input,
+.catalog-controls select {
+    padding: 11px 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    font-size: 15px;
+    background: white;
+    min-width: 220px;
+}
+
+.catalog-controls input:focus,
+.catalog-controls select:focus {
+    outline: none;
+    border-color: #2563eb;
+}
+
+.product-card {
+    cursor: pointer;
+}
+
+.product-card:hover {
+    transform: translateY(-3px);
+    transition: transform 0.15s ease;
+}

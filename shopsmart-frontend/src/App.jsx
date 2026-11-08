@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import api from "./services/api";
 import Auth from "./Auth";
 import Orders from "./Orders";
+import ProductDetail from "./ProductDetail";
 import "./App.css";
 
 function App() {
@@ -21,6 +22,11 @@ function App() {
     const [showAuth, setShowAuth] = useState(false);
     const [showCart, setShowCart] = useState(false);
     const [showOrders, setShowOrders] = useState(false);
+
+    const [searchTerm, setSearchTerm] = useState("");
+    const [category, setCategory] = useState("");
+    const [categories, setCategories] = useState([]);
+    const [selectedProduct, setSelectedProduct] = useState(null);
 
     const [user, setUser] = useState(() => {
         try {
@@ -41,25 +47,42 @@ function App() {
         };
     }
 
-    // Load products
+    // Load product categories
     useEffect(() => {
-        api.get("/api/products", {
-            params: {
+        api.get("/api/products/categories")
+            .then((response) => setCategories(response.data))
+            .catch((err) => console.error("Category loading error:", err));
+    }, []);
+
+    // Load products (debounced search + category filter)
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setLoading(true);
+            setError("");
+
+            const params = {
                 page: 0,
                 size: 20,
                 sortBy: "name",
                 direction: "asc",
-            },
-        })
-            .then((response) => {
-                setProducts(response.data.content || []);
-            })
-            .catch((err) => {
-                console.error("Product loading error:", err);
-                setError("Unable to load products. Please check your backend.");
-            })
-            .finally(() => setLoading(false));
-    }, []);
+            };
+
+            if (searchTerm.trim()) params.search = searchTerm.trim();
+            if (category) params.category = category;
+
+            api.get("/api/products", { params })
+                .then((response) => {
+                    setProducts(response.data.content || []);
+                })
+                .catch((err) => {
+                    console.error("Product loading error:", err);
+                    setError("Unable to load products. Please check your backend.");
+                })
+                .finally(() => setLoading(false));
+        }, 250);
+
+        return () => clearTimeout(timer);
+    }, [searchTerm, category]);
 
     // Load cart from backend
     async function loadCart() {
@@ -572,6 +595,31 @@ function App() {
                             Explore our latest collection.
                         </p>
 
+                        <div className="catalog-controls">
+                            <input
+                                type="search"
+                                placeholder="Search products..."
+                                value={searchTerm}
+                                onChange={(event) =>
+                                    setSearchTerm(event.target.value)
+                                }
+                            />
+
+                            <select
+                                value={category}
+                                onChange={(event) =>
+                                    setCategory(event.target.value)
+                                }
+                            >
+                                <option value="">All categories</option>
+                                {categories.map((name) => (
+                                    <option key={name} value={name}>
+                                        {name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
                         {cartMessage && (
                             <p className="cart-message">{cartMessage}</p>
                         )}
@@ -585,6 +633,7 @@ function App() {
                                 <article
                                     className="product-card"
                                     key={product.id}
+                                    onClick={() => setSelectedProduct(product)}
                                 >
                                     <img
                                         src={product.imageUrl}
@@ -609,9 +658,10 @@ function App() {
 
                                         <button
                                             className="add-button"
-                                            onClick={() =>
-                                                handleAddToCart(product.id)
-                                            }
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                handleAddToCart(product.id);
+                                            }}
                                         >
                                             Add to Cart
                                         </button>
@@ -626,6 +676,15 @@ function App() {
                     </main>
                 </>
             )}
+
+            <ProductDetail
+                product={selectedProduct}
+                onClose={() => setSelectedProduct(null)}
+                onAdd={(id) => {
+                    handleAddToCart(id);
+                    setSelectedProduct(null);
+                }}
+            />
 
             {/* Footer */}
             <footer id="about">

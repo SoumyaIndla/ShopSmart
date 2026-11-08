@@ -295,13 +295,14 @@ class ShopSmartApplicationTests {
                         .content("{\"deliveryStatus\":\"SHIPPED\"}"))
                 .andExpect(status().isForbidden());
 
-        // An admin can.
+        // An admin can, and the order status follows the delivery status.
         mvc.perform(patch("/api/admin/orders/" + orderId + "/delivery-status")
                         .header("Authorization", bearer(adminToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"deliveryStatus\":\"SHIPPED\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.deliveryStatus").value("SHIPPED"));
+                .andExpect(jsonPath("$.deliveryStatus").value("SHIPPED"))
+                .andExpect(jsonPath("$.status").value("SHIPPED"));
 
         // The owner sees the updated timeline (index 3 = SHIPPED).
         mvc.perform(get("/api/orders/" + orderId + "/tracking")

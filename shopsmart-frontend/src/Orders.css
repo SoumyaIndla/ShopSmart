@@ -125,3 +125,10 @@
         grid-template-columns: 1fr;
     }
 }
+
+.order-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+

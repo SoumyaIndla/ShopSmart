@@ -71,13 +71,26 @@ public class CustomerOrder {
 
     // Cancel order
     public void cancel() {
-        if (status != OrderStatus.PLACED) {
+        if (status == OrderStatus.CANCELLED
+                || status == OrderStatus.DELIVERED
+                || status == OrderStatus.RETURNED) {
             throw new IllegalStateException(
-                    "Only placed orders can be cancelled"
+                    "This order can no longer be cancelled"
             );
         }
 
         status = OrderStatus.CANCELLED;
+    }
+
+    // Keep the order status aligned with the delivery lifecycle.
+    public void syncOrderStatus(OrderStatus newStatus) {
+        if (status == OrderStatus.CANCELLED) {
+            throw new IllegalStateException(
+                    "A cancelled order keeps its status"
+            );
+        }
+
+        status = newStatus;
     }
 
     // Update delivery status

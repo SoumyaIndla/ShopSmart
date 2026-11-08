@@ -89,6 +89,7 @@ JSON requests use `Content-Type: application/json`. After login, send `Authoriza
 - Admin-only actions return **403** for authenticated customers and **401** when no token is present.
 - Checkout locks inventory rows and runs in one transaction. Stock is reduced atomically, and a failed checkout leaves the cart untouched.
 - A cancelled order restores stock once; a second cancellation, cancelling a shipped order, or confirming a COD payment on a cancelled order returns **409**.
+- Order status follows the delivery lifecycle (`PLACED → CONFIRMED → PACKED → SHIPPED → OUT_FOR_DELIVERY → DELIVERED`). Customers may cancel until the parcel is shipped.
 - Product deletion is a soft deactivation so historical orders stay readable.
 - Malformed bodies return **400**, unknown routes **404**, wrong methods **405**, unsupported content types **415**, and genuine server errors **500** (logged server-side without leaking internals).
 

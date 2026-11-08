@@ -15,6 +15,20 @@ function Orders({ onBack }) {
         },
     };
 
+    async function loadOrders() {
+        try {
+            const response = await api.get("/api/orders", config);
+            setOrders(response.data);
+        } catch (err) {
+            setError(
+                err.response?.data?.message ||
+                "Unable to load your orders."
+            );
+        } finally {
+            setLoading(false);
+        }
+    }
+
     useEffect(() => {
         let active = true;
 
@@ -39,6 +53,34 @@ function Orders({ onBack }) {
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    async function handleCancel(orderId) {
+        if (!window.confirm("Cancel this order?")) return;
+
+        setError("");
+
+        try {
+            await api.post(`/api/orders/${orderId}/cancel`, {}, config);
+            setTracking(null);
+            await loadOrders();
+        } catch (err) {
+            setError(
+                err.response?.data?.message ||
+                "Unable to cancel this order."
+            );
+        }
+    }
+
+    function canCancel(order) {
+        if (order.status === "CANCELLED") return false;
+
+        return ![
+            "SHIPPED",
+            "OUT_FOR_DELIVERY",
+            "DELIVERED",
+            "RETURNED",
+        ].includes(order.deliveryStatus);
+    }
 
     async function handleTrack(orderId) {
         setError("");
@@ -138,12 +180,23 @@ function Orders({ onBack }) {
                                 </div>
                             </dl>
 
-                            <button
-                                className="checkout-button"
-                                onClick={() => handleTrack(order.id)}
-                            >
-                                Track Order
-                            </button>
+                            <div className="order-actions">
+                                <button
+                                    className="checkout-button"
+                                    onClick={() => handleTrack(order.id)}
+                                >
+                                    Track Order
+                                </button>
+
+                                {canCancel(order) && (
+                                    <button
+                                        className="remove-button"
+                                        onClick={() => handleCancel(order.id)}
+                                    >
+                                        Cancel Order
+                                    </button>
+                                )}
+                            </div>
                         </article>
                     ))}
                 </div>

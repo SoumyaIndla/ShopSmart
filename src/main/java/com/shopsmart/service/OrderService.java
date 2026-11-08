@@ -136,7 +136,9 @@ public class OrderService {
                         )
                 );
 
-        if (order.getStatus() != OrderStatus.PLACED) {
+        if (order.getStatus() == OrderStatus.CANCELLED
+                || order.getStatus() == OrderStatus.DELIVERED
+                || order.getStatus() == OrderStatus.RETURNED) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
                     "This order can no longer be cancelled"
@@ -146,7 +148,8 @@ public class OrderService {
         // Once a parcel has left the warehouse it cannot be cancelled.
         if (order.getDeliveryStatus() == DeliveryStatus.SHIPPED
                 || order.getDeliveryStatus() == DeliveryStatus.OUT_FOR_DELIVERY
-                || order.getDeliveryStatus() == DeliveryStatus.DELIVERED) {
+                || order.getDeliveryStatus() == DeliveryStatus.DELIVERED
+                || order.getDeliveryStatus() == DeliveryStatus.RETURNED) {
 
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
@@ -195,8 +198,24 @@ public class OrderService {
 
         order.updateDeliveryStatus(status);
 
+        if (order.getStatus() != OrderStatus.CANCELLED) {
+            order.syncOrderStatus(orderStatusFor(status));
+        }
+
         // Mapped inside the transaction so lazy items/payment can be read.
         return ApiMapper.order(order);
+    }
+
+    private static OrderStatus orderStatusFor(DeliveryStatus status) {
+        return switch (status) {
+            case PROCESSING -> OrderStatus.PLACED;
+            case CONFIRMED -> OrderStatus.CONFIRMED;
+            case PACKED -> OrderStatus.PACKED;
+            case SHIPPED -> OrderStatus.SHIPPED;
+            case OUT_FOR_DELIVERY -> OrderStatus.OUT_FOR_DELIVERY;
+            case DELIVERED -> OrderStatus.DELIVERED;
+            case RETURNED -> OrderStatus.RETURNED;
+        };
     }
 
     // CUSTOMER: current delivery status plus a timeline derived from the enum.
